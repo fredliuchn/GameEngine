@@ -18,56 +18,56 @@ int main(void) {
         char title[] = "Hello, Engine!";
         char title_icon[] = "Hello, Engine! (iconified)";
 
-        /* establish connection to X server */
+        /* 建立与 X server 的连接*/
         pConn = xcb_connect(0, 0);
 
-        /* get the first screen */
+        /* 获取第一个屏幕 */
         pScreen = xcb_setup_roots_iterator(xcb_get_setup(pConn)).data;
 
-        /* get the root window */
+        /* 获取根窗口 */
         window = pScreen->root;
 
-        /* create black (foreground) graphic context */
+        /* 创建黑色（前景）图形上下文 */
         foreground = xcb_generate_id(pConn);
         mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
         values[0] = pScreen->black_pixel;
         values[1] = 0;
         xcb_create_gc(pConn, foreground, window, mask, values);
 
-        /* create white (background) graphic context */
+        /* 创建白色（背景）图形上下文 */
         background = xcb_generate_id(pConn);
         mask = XCB_GC_BACKGROUND | XCB_GC_GRAPHICS_EXPOSURES;
         values[0] = pScreen->white_pixel;
         values[1] = 0;
         xcb_create_gc(pConn, background, window, mask, values);
 
-        /* create window */
+        /* 创建窗口 */
         window = xcb_generate_id(pConn);
         mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
         values[0] = pScreen->white_pixel;
         values[1] = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS;
         xcb_create_window (pConn,                                       /* connection */
                                            XCB_COPY_FROM_PARENT,        /* depth */
-                                           window,                                      /* window ID */
-                                           pScreen->root,                       /* parent window */
-                                           20, 20,                                      /* x, y */
-                                           640, 480,                            /* width, height */
-                                           10,                                          /* boarder width */
+                                           window,                      /* window ID */
+                                           pScreen->root,               /* parent window */
+                                           20, 20,                      /* x, y */
+                                           640, 480,                    /* width, height */
+                                           10,                          /* boarder width */
                                            XCB_WINDOW_CLASS_INPUT_OUTPUT, /* class */
                                            pScreen->root_visual,        /* visual */
-                                           mask, values);                       /* masks */
+                                           mask, values);               /* masks */
 
-        /* set the title of the window */
+        /* 设置窗口的标题 */
         xcb_change_property(pConn, XCB_PROP_MODE_REPLACE, window,
                             XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8,
                             strlen(title), title);
 
-        /* set the title of the window icon */
+        /*  设置窗口图标的标题 */
         xcb_change_property(pConn, XCB_PROP_MODE_REPLACE, window,
                             XCB_ATOM_WM_ICON_NAME, XCB_ATOM_STRING, 8,
                             strlen(title_icon), title_icon);
 
-        /* map the window on the screen */
+        /* 将窗口映射到屏幕上 */
         xcb_map_window(pConn, window);
 
         xcb_flush(pConn);
