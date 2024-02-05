@@ -1,3 +1,4 @@
+// include the basic windows header file
 #include <windows.h>
 #include <windowsx.h>
 #include <tchar.h>
@@ -16,20 +17,20 @@ using namespace DirectX::PackedVector;
 const uint32_t SCREEN_WIDTH  =  960;
 const uint32_t SCREEN_HEIGHT =  480;
 
-// 全局声明
-IDXGISwapChain          *g_pSwapchain = nullptr;              // 指向交换链接口的指针
-ID3D11Device            *g_pDev       = nullptr;              // 指向 Direct3D 设备接口的指针
-ID3D11DeviceContext     *g_pDevcon    = nullptr;              // 指向 Direct3D 设备上下文的指针
+// global declarations
+IDXGISwapChain          *g_pSwapchain = nullptr;              // the pointer to the swap chain interface
+ID3D11Device            *g_pDev       = nullptr;              // the pointer to our Direct3D device interface
+ID3D11DeviceContext     *g_pDevcon    = nullptr;              // the pointer to our Direct3D device context
 
 ID3D11RenderTargetView  *g_pRTView    = nullptr;
 
-ID3D11InputLayout       *g_pLayout    = nullptr;              // 指向输入布局的指针
-ID3D11VertexShader      *g_pVS        = nullptr;              // 指向顶点着色器的指针
-ID3D11PixelShader       *g_pPS        = nullptr;              // 指向像素着色器的指针
+ID3D11InputLayout       *g_pLayout    = nullptr;              // the pointer to the input layout
+ID3D11VertexShader      *g_pVS        = nullptr;              // the pointer to the vertex shader
+ID3D11PixelShader       *g_pPS        = nullptr;              // the pointer to the pixel shader
 
-ID3D11Buffer            *g_pVBuffer   = nullptr;              // 顶点缓冲区
+ID3D11Buffer            *g_pVBuffer   = nullptr;              // Vertex Buffer
 
-// 顶点缓冲区结构
+// vertex buffer structure
 struct VERTEX {
         XMFLOAT3    Position;
         XMFLOAT4    Color;
@@ -50,16 +51,16 @@ void CreateRenderTarget() {
     HRESULT hr;
     ID3D11Texture2D *pBackBuffer;
 
-    // 获取指向后台缓冲区的指针
+    // Get a pointer to the back buffer
     g_pSwapchain->GetBuffer( 0, __uuidof( ID3D11Texture2D ),
                                  ( LPVOID* )&pBackBuffer );
 
-    // 创建渲染目标视图
+    // Create a render-target view
     g_pDev->CreateRenderTargetView( pBackBuffer, NULL,
                                           &g_pRTView );
     pBackBuffer->Release();
 
-    // 绑定视图
+    // Bind the view
     g_pDevcon->OMSetRenderTargets( 1, &g_pRTView, NULL );
 }
 
@@ -75,23 +76,23 @@ void SetViewPort() {
     g_pDevcon->RSSetViewports(1, &viewport);
 }
 
-// 加载和准备着色器
+// this is the function that loads and prepares the shaders
 void InitPipeline() {
-    // 加载并编译两个着色器
+    // load and compile the two shaders
     ID3DBlob *VS, *PS;
 
     D3DReadFileToBlob(L"copy.vso", &VS);
     D3DReadFileToBlob(L"copy.pso", &PS);
 
-    // 将两个着色器封装到着色器对象中
+    // encapsulate both shaders into shader objects
     g_pDev->CreateVertexShader(VS->GetBufferPointer(), VS->GetBufferSize(), NULL, &g_pVS);
     g_pDev->CreatePixelShader(PS->GetBufferPointer(), PS->GetBufferSize(), NULL, &g_pPS);
 
-    // 设置着色器对象
+    // set the shader objects
     g_pDevcon->VSSetShader(g_pVS, 0, 0);
     g_pDevcon->PSSetShader(g_pPS, 0, 0);
 
-    // 创建输入布局对象
+    // create the input layout object
     D3D11_INPUT_ELEMENT_DESC ied[] =
     {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -105,9 +106,9 @@ void InitPipeline() {
     PS->Release();
 }
 
-// 创建要渲染的形状
+// this is the function that creates the shape to render
 void InitGraphics() {
-    // 使用 VERTEX 结构创建一个三角形
+    // create a triangle using the VERTEX struct
     VERTEX OurVertices[] =
     {
         {XMFLOAT3(0.0f, 0.5f, 0.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
@@ -116,47 +117,48 @@ void InitGraphics() {
     };
 
 
-    // 创建顶点缓冲区
+    // create the vertex buffer
     D3D11_BUFFER_DESC bd;
     ZeroMemory(&bd, sizeof(bd));
 
-    bd.Usage = D3D11_USAGE_DYNAMIC;                // CPU 和 GPU 的写访问权限
-    bd.ByteWidth = sizeof(VERTEX) * 3;             // size
-    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;       // 用作顶点缓冲区
-    bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // 允许CPU写入缓冲区
+    bd.Usage = D3D11_USAGE_DYNAMIC;                // write access access by CPU and GPU
+    bd.ByteWidth = sizeof(VERTEX) * 3;             // size is the VERTEX struct * 3
+    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;       // use as a vertex buffer
+    bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // allow CPU to write in buffer
 
     g_pDev->CreateBuffer(&bd, NULL, &g_pVBuffer);       // create the buffer
 
-    // 将顶点复制到缓冲区中
+    // copy the vertices into the buffer
     D3D11_MAPPED_SUBRESOURCE ms;
-    g_pDevcon->Map(g_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);    // 映射缓冲区
-    memcpy(ms.pData, OurVertices, sizeof(VERTEX) * 3);                       // 复制数据
-    g_pDevcon->Unmap(g_pVBuffer, NULL);                                      // 取消映射缓冲区
+    g_pDevcon->Map(g_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);    // map the buffer
+    memcpy(ms.pData, OurVertices, sizeof(VERTEX) * 3);                       // copy the data
+    g_pDevcon->Unmap(g_pVBuffer, NULL);                                      // unmap the buffer
 }
 
-// 准备使用的图形资源
+// this function prepare graphic resources for use
 HRESULT CreateGraphicsResources(HWND hWnd)
 {
     HRESULT hr = S_OK;
     if (g_pSwapchain == nullptr)
     {
-        // 创建一个结构体来保存有关交换链的信息
+        // create a struct to hold information about the swap chain
         DXGI_SWAP_CHAIN_DESC scd;
 
-        // 清除结构以供使用
+        // clear out the struct for use
         ZeroMemory(&scd, sizeof(DXGI_SWAP_CHAIN_DESC));
 
-        scd.BufferCount = 1;                                    // 一个后台缓冲区
+        // fill the swap chain description struct
+        scd.BufferCount = 1;                                    // one back buffer
         scd.BufferDesc.Width = SCREEN_WIDTH;
         scd.BufferDesc.Height = SCREEN_HEIGHT;
-        scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;     // 使用 32 位颜色
+        scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;     // use 32-bit color
         scd.BufferDesc.RefreshRate.Numerator = 60;
         scd.BufferDesc.RefreshRate.Denominator = 1;
-        scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;      // 如何使用交换链
-        scd.OutputWindow = hWnd;                                // 要使用的窗口
-        scd.SampleDesc.Count = 4;                               // 有多少多重样本
-        scd.Windowed = TRUE;                                    // 窗口/全屏模式(windowed/full-screen mode)
-        scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;     // 允许全屏切换
+        scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;      // how swap chain is to be used
+        scd.OutputWindow = hWnd;                                // the window to be used
+        scd.SampleDesc.Count = 4;                               // how many multisamples
+        scd.Windowed = TRUE;                                    // windowed/full-screen mode
+        scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;     // allow full-screen switching
 
         const D3D_FEATURE_LEVEL FeatureLevels[] = { D3D_FEATURE_LEVEL_11_1,
                                                     D3D_FEATURE_LEVEL_11_0,
@@ -169,7 +171,7 @@ HRESULT CreateGraphicsResources(HWND hWnd)
 
         HRESULT hr = S_OK;
 
-        // 使用 scd 结构中的信息创建设备、设备上下文和交换链
+        // create a device, device context and swap chain using the information in the scd struct
         hr = D3D11CreateDeviceAndSwapChain(NULL,
                                       D3D_DRIVER_TYPE_HARDWARE,
                                       NULL,
@@ -220,45 +222,52 @@ void DiscardGraphicsResources()
     SafeRelease(&g_pDevcon);
 }
 
+// this is the function used to render a single frame
 void RenderFrame()
 {
-    // 将后台缓冲区清除为深蓝色
+    // clear the back buffer to a deep blue
     const FLOAT clearColor[] = {0.0f, 0.2f, 0.4f, 1.0f};
     g_pDevcon->ClearRenderTargetView(g_pRTView, clearColor);
 
-    //在此处的后台缓冲区上进行 3D 渲染
+    // do 3D rendering on the back buffer here
     {
-        // 选择要显示的顶点缓冲区
+        // select which vertex buffer to display
         UINT stride = sizeof(VERTEX);
         UINT offset = 0;
         g_pDevcon->IASetVertexBuffers(0, 1, &g_pVBuffer, &stride, &offset);
 
-        // 选择我们正在使用的原始类型
+        // select which primtive type we are using
         g_pDevcon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        // 将顶点缓冲区绘制到后台缓冲区
+        // draw the vertex buffer to the back buffer
         g_pDevcon->Draw(3, 0);
     }
 
-    // 交换后台缓冲区和前台缓冲区
+    // swap the back buffer and the front buffer
     g_pSwapchain->Present(0, 0);
 }
 
+// the WindowProc function prototype
 LRESULT CALLBACK WindowProc(HWND hWnd,
                          UINT message,
                          WPARAM wParam,
                          LPARAM lParam);
 
+// the entry point for any Windows program
 int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
                    LPTSTR lpCmdLine,
                    int nCmdShow)
 {
+    // the handle for the window, filled by a function
     HWND hWnd;
+    // this struct holds information for the window class
     WNDCLASSEX wc;
 
+    // clear out the window class for use
     ZeroMemory(&wc, sizeof(WNDCLASSEX));
 
+    // fill in the struct with the needed information
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WindowProc;
@@ -267,8 +276,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
     wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
     wc.lpszClassName = _T("WindowClass1");
 
+    // register the window class
     RegisterClassEx(&wc);
 
+    // create the window and use the result as the handle
     hWnd = CreateWindowEx(0,
                           _T("WindowClass1"),                   // name of the window class
                           _T("Hello, Engine![Direct 3D]"),      // title of the window
@@ -282,24 +293,35 @@ int WINAPI WinMain(HINSTANCE hInstance,
                           hInstance,                            // application handle
                           NULL);                                // used with multiple windows, NULL
 
+    // display the window on the screen
     ShowWindow(hWnd, nCmdShow);
 
+    // enter the main loop:
+
+    // this struct holds Windows event messages
     MSG msg;
 
+    // wait for the next message in the queue, store the result in 'msg'
     while(GetMessage(&msg, nullptr, 0, 0))
     {
+        // translate keystroke messages into the right format
         TranslateMessage(&msg);
+
+        // send the message to the WindowProc function
         DispatchMessage(&msg);
     }
 
+    // return this part of the WM_QUIT message to Windows
     return msg.wParam;
 }
 
+// this is the main message handler for the program
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
     bool wasHandled = false;
 
+    // sort through and find what code to run for the message given
     switch(message)
     {
 	case WM_CREATE:
@@ -333,6 +355,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
         break;
     }
 
+    // Handle any messages the switch statement didn't
     if (!wasHandled) { result = DefWindowProc (hWnd, message, wParam, lParam); }
     return result;
 }

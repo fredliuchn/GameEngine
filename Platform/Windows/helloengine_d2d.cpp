@@ -1,3 +1,4 @@
+// include the basic windows header file
 #include <windows.h>
 #include <windowsx.h>
 #include <tchar.h>
@@ -5,7 +6,6 @@
 #include <d2d1.h>
 
 ID2D1Factory			*pFactory = nullptr;
-/*画布*/
 ID2D1HwndRenderTarget	*pRenderTarget = nullptr;
 ID2D1SolidColorBrush	*pLightSlateGrayBrush = nullptr;
 ID2D1SolidColorBrush	*pCornflowerBlueBrush = nullptr;
@@ -59,23 +59,31 @@ void DiscardGraphicsResources()
     SafeRelease(&pCornflowerBlueBrush);
 }
 
+
+// the WindowProc function prototype
 LRESULT CALLBACK WindowProc(HWND hWnd,
                          UINT message,
                          WPARAM wParam,
                          LPARAM lParam);
 
+// the entry point for any Windows program
 int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
                    LPTSTR lpCmdLine,
                    int nCmdShow)
 {
+    // the handle for the window, filled by a function
     HWND hWnd;
+    // this struct holds information for the window class
     WNDCLASSEX wc;
 
+    // initialize COM
     if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) return -1;
 
+    // clear out the window class for use
     ZeroMemory(&wc, sizeof(WNDCLASSEX));
 
+    // fill in the struct with the needed information
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WindowProc;
@@ -84,8 +92,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
     wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
     wc.lpszClassName = _T("WindowClass1");
 
+    // register the window class
     RegisterClassEx(&wc);
 
+    // create the window and use the result as the handle
     hWnd = CreateWindowEx(0,
                           _T("WindowClass1"),    // name of the window class
                           _T("Hello, Engine![Direct 2D]"),   // title of the window
@@ -99,34 +109,45 @@ int WINAPI WinMain(HINSTANCE hInstance,
                           hInstance,    // application handle
                           NULL);    // used with multiple windows, NULL
 
+    // display the window on the screen
     ShowWindow(hWnd, nCmdShow);
 
+    // enter the main loop:
+
+    // this struct holds Windows event messages
     MSG msg;
 
+    // wait for the next message in the queue, store the result in 'msg'
     while(GetMessage(&msg, nullptr, 0, 0))
     {
+        // translate keystroke messages into the right format
         TranslateMessage(&msg);
 
+        // send the message to the WindowProc function
         DispatchMessage(&msg);
     }
 
+    // uninitialize COM
     CoUninitialize();
 
+    // return this part of the WM_QUIT message to Windows
     return msg.wParam;
 }
 
+// this is the main message handler for the program
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT result = 0;
     bool wasHandled = false;
 
+    // sort through and find what code to run for the message given
     switch(message)
     {
 	case WM_CREATE:
 		if (FAILED(D2D1CreateFactory(
 					D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory)))
 		{
-			result = -1;
+			result = -1; // Fail CreateWindowEx.
 		}
 		wasHandled = true;
         result = 1;
@@ -140,16 +161,16 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				PAINTSTRUCT ps;
 				BeginPaint(hWnd, &ps);
 
-				// 开始构建GPU绘制命令
+				// start build GPU draw command
 				pRenderTarget->BeginDraw();
 
-				// 用白色清除背景
+				// clear the background with white color
 				pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::White));
 
-                // 检索绘图区域的大小
+                // retrieve the size of drawing area
                 D2D1_SIZE_F rtSize = pRenderTarget->GetSize();
 
-                // 绘制网格背景
+                // draw a grid background.
                 int width = static_cast<int>(rtSize.width);
                 int height = static_cast<int>(rtSize.height);
 
@@ -173,7 +194,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
                         );
                 }
 
-                // 画两个矩形
+                // draw two rectangles
                 D2D1_RECT_F rectangle1 = D2D1::RectF(
                      rtSize.width/2 - 50.0f,
                      rtSize.height/2 - 50.0f,
@@ -188,13 +209,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
                      rtSize.height/2 + 100.0f
                      );
 
-                // 绘制一个填充的矩形
+                // draw a filled rectangle
                 pRenderTarget->FillRectangle(&rectangle1, pLightSlateGrayBrush);
 
-                // 只画一个矩形的轮廓
+                // draw a outline only rectangle
                 pRenderTarget->DrawRectangle(&rectangle2, pCornflowerBlueBrush);
 
-				// 结束 GPU 绘制命令构建
+				// end GPU draw command building
 				hr = pRenderTarget->EndDraw();
 				if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
 				{
@@ -234,7 +255,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
         break;
     }
 
-    // 处理 switch 语句没有处理的任何消息
+    // Handle any messages the switch statement didn't
     if (!wasHandled) { result = DefWindowProc (hWnd, message, wParam, lParam); }
     return result;
 }

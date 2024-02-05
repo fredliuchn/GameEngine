@@ -14,18 +14,21 @@
 #define GLX_CONTEXT_MINOR_VERSION_ARB       0x2092
 typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
 
-// 检查扩展字符串是否存在的帮助程序
+// Helper to check for extension string presence.  Adapted from:
+//   http://www.opengl.org/resources/features/OGLextensions/
 static bool isExtensionSupported(const char *extList, const char *extension)
 {
   const char *start;
   const char *where, *terminator;
   
-  /* 扩展名不应包含空格*/
+  /* Extension names should not have spaces. */
   where = strchr(extension, ' ');
   if (where || *extension == '\0')
     return false;
 
-  /* 在解析 OpenGL 扩展字符串时要做到万无一失，需要小心。不要被子字符串等所迷惑。 */
+  /* It takes a bit of care to be fool-proof about parsing the
+     OpenGL extensions string. Don't be fooled by sub-strings,
+     etc. */
   for (start=extList;;) {
     where = strstr(start, extension);
 
@@ -102,7 +105,7 @@ int main(void) {
     glXCreateContextAttribsARBProc glXCreateContextAttribsARB;
     const char *glxExts;
 
-    // 获取匹配的 FB 配置
+    // Get a matching FB config
     static int visual_attribs[] =
     {
       GLX_X_RENDERABLE    , True,
@@ -123,7 +126,7 @@ int main(void) {
 
     int glx_major, glx_minor;
 
-    /* 打开 Xlib 显示 */ 
+    /* Open Xlib Display */ 
     display = XOpenDisplay(NULL);
     if(!display)
     {
@@ -141,7 +144,7 @@ int main(void) {
 
     default_screen = DefaultScreen(display);
 
-    /* 查询帧缓冲区配置 */
+    /* Query framebuffer configurations */
     fb_configs = glXChooseFBConfig(display, default_screen, visual_attribs, &num_fb_configs);
     if(!fb_configs || num_fb_configs == 0)
     {
@@ -149,7 +152,7 @@ int main(void) {
         return -1;
     }
 
-    /* 选择每像素样本最多的 FB 配置/视觉效果 */
+    /* Pick the FB config/visual with the most samples per pixel */
     {
         int best_fbc = -1, worst_fbc = -1, best_num_samp = -1, worst_num_samp = 999;
 
@@ -177,11 +180,11 @@ int main(void) {
         fb_config = fb_configs[best_fbc];
     }
 
-    /* 获得视觉效果 */
+    /* Get a visual */
     vi = glXGetVisualFromFBConfig(display, fb_config);
     printf("Chosen visual ID = 0x%lx\n", vi->visualid);
 
-    /* 建立与 X server的连接 */
+    /* establish connection to X server */
     pConn = XGetXCBConnection(display);
     if(!pConn)
     {
@@ -190,10 +193,10 @@ int main(void) {
         return -1;
     }
 
-    /* 获取事件队列所有权 */
+    /* Acquire event queue ownership */
     XSetEventQueueOwner(display, XCBOwnsEventQueue);
 
-    /* 查找 XCB 屏幕*/
+    /* Find XCB screen */
     xcb_screen_iterator_t screen_iter = 
         xcb_setup_roots_iterator(xcb_get_setup(pConn));
     for(int screen_num = vi->screen;
@@ -201,10 +204,10 @@ int main(void) {
         --screen_num, xcb_screen_next(&screen_iter));
     pScreen = screen_iter.data;
 
-    /* 获取根窗口 */
+    /* get the root window */
     window = pScreen->root;
 
-    /* 为颜色图创建 XID */
+    /* Create XID's for colormap */
     colormap = xcb_generate_id(pConn);
 
     xcb_create_colormap(
@@ -215,7 +218,7 @@ int main(void) {
         vi->visualid 
         );
 
-    /* 创建窗口 */
+    /* create window */
     window = xcb_generate_id(pConn);
     mask = XCB_CW_EVENT_MASK  | XCB_CW_COLORMAP;
     values[0] = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS;
@@ -234,23 +237,26 @@ int main(void) {
 
     XFree(vi);
 
-    /* 设置窗口的标题 */
+    /* set the title of the window */
     xcb_change_property(pConn, XCB_PROP_MODE_REPLACE, window,
                 XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8,
                 strlen(title), title);
 
+    /* set the title of the window icon */
     xcb_change_property(pConn, XCB_PROP_MODE_REPLACE, window,
                 XCB_ATOM_WM_ICON_NAME, XCB_ATOM_STRING, 8,
                 strlen(title_icon), title_icon);
 
+    /* map the window on the screen */
     xcb_map_window(pConn, window);
 
     xcb_flush(pConn);
 
-    /* 获取默认屏幕的GLX扩展列表 */
+    /* Get the default screen's GLX extension list */
     glxExts = glXQueryExtensionsString(display, default_screen);
 
-    /* NOTE: 在调用glXGetProcAddressARB之前，没有必要创建当前上下文 */
+    /* NOTE: It is not necessary to create or make current to a context before
+       calling glXGetProcAddressARB */
     glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)
            glXGetProcAddressARB( (const GLubyte *) "glXCreateContextAttribsARB" );
 
@@ -275,7 +281,7 @@ int main(void) {
     {
         int context_attribs[] =
           {
-            GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+            GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
             GLX_CONTEXT_MINOR_VERSION_ARB, 0,
             None
           };
@@ -313,7 +319,7 @@ int main(void) {
         return -1;
     }
 
-    /* 验证上下文是直接上下文 */
+    /* Verifying that context is a direct context */
     if (!glXIsDirect (display, context))
     {
         printf( "Indirect GLX rendering context obtained\n" );
@@ -343,7 +349,7 @@ int main(void) {
 
     drawable = glxwindow;
 
-    /* 使 OpenGL 上下文成为当前上下文 */
+    /* make OpenGL context current */
     if(!glXMakeContextCurrent(display, drawable, drawable, context))
     {
         xcb_destroy_window(pConn, window);
